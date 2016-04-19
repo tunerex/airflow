@@ -1,7 +1,4 @@
-Dear Airflow Maintainers,
-
-Please accept the following PR that
-* Addresses the following issues (links to issues addressed by this PR) :
+* This PR addresses the following issues (links):
 
 Reminder to contributors:
 * You must add an Apache License header to all new files

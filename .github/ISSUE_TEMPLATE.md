@@ -1,7 +1,3 @@
-Dear Airflow Maintainers,
-
-Before I tell you about my issue, let me describe my environment:
-
 ### Environment
 
 * Version of Airflow (e.g. a release version, running your own fork, running off master -- provide a git log snippet):
