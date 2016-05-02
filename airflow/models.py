@@ -25,6 +25,7 @@ import socket
 import sys
 import traceback
 from urllib.parse import urlparse
+from pytz import timezone
 
 from sqlalchemy import (
     Column, Integer, String, DateTime, Text, Boolean, ForeignKey, PickleType,
@@ -2002,6 +2003,7 @@ class DAG(LoggingMixin):
     def __init__(
             self, dag_id,
             schedule_interval=timedelta(days=1),
+            cron_timezone=timezone('utc'),
             start_date=None, end_date=None,
             full_filepath=None,
             template_searchpath=None,
@@ -2022,6 +2024,8 @@ class DAG(LoggingMixin):
         self.start_date = start_date
         self.end_date = end_date or datetime.now()
         self.schedule_interval = schedule_interval
+        self._cron_timezone = cron_timezone
+
         if schedule_interval in utils.cron_presets:
             self._schedule_interval = utils.cron_presets.get(schedule_interval)
         elif schedule_interval == '@once':
@@ -2083,17 +2087,21 @@ class DAG(LoggingMixin):
             start_date=start_date, end_date=end_date,
             num=num, delta=self._schedule_interval)
 
+    def shift_cron_time(self, time):
+        offset = self._cron_timezone.utcoffset(time)
+        return time + offset
+
     def following_schedule(self, dttm):
         if isinstance(self._schedule_interval, six.string_types):
             cron = croniter(self._schedule_interval, dttm)
-            return cron.get_next(datetime)
+            return self.shift_cron_time(cron.get_next(datetime))
         elif isinstance(self._schedule_interval, timedelta):
             return dttm + self._schedule_interval
 
     def previous_schedule(self, dttm):
         if isinstance(self._schedule_interval, six.string_types):
             cron = croniter(self._schedule_interval, dttm)
-            return cron.get_prev(datetime)
+            return self.shift_cron_time(cron.get_prev(datetime))
         elif isinstance(self._schedule_interval, timedelta):
             return dttm - self._schedule_interval
 
