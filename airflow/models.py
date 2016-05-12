@@ -2024,7 +2024,11 @@ class DAG(LoggingMixin):
         self.start_date = start_date
         self.end_date = end_date or datetime.now()
         self.schedule_interval = schedule_interval
-        self.cron_timezone = cron_timezone
+
+        if isinstance(cron_timezone, six.string_types):
+            self.cron_timezone = timezone(cron_timezone)
+        else:
+            self.cron_timezone = cron_timezone
 
         if schedule_interval in utils.cron_presets:
             self._schedule_interval = utils.cron_presets.get(schedule_interval)
@@ -2091,8 +2095,9 @@ class DAG(LoggingMixin):
 
     def shift_cron_time(self, time):
         offset = self.cron_timezone.utcoffset(time)
-        result = time + offset
-        if offset.total_seconds() < 0:
+        result = time - offset
+        # make sure that result of time shifting is later than the time that is passed.
+        if offset.total_seconds() > 0:
             result = result + timedelta(days=1)
         return result
 
