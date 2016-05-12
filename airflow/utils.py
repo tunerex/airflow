@@ -25,6 +25,7 @@ import signal
 import six
 import smtplib
 from tempfile import mkdtemp
+from pytz import timezone
 
 from alembic.config import Config
 from alembic import command
@@ -322,11 +323,21 @@ def validate_key(k, max_length=250):
         return True
 
 
+def shift_cron_time(time, cron_timezone=timezone('utc')):
+    offset = cron_timezone.utcoffset(time)
+    result = time + offset
+    if offset.total_seconds() < 0:
+        result = result + timedelta(days=1)
+    return time + offset
+
+
 def date_range(
         start_date,
         end_date=None,
         num=None,
-        delta=None):
+        delta=None,
+        cron_timezone=timezone('utc'),
+    ):
     """
     Get a set of dates as a list based on a start, end and delta, delta
     can be something that can be added to ``datetime.datetime``
@@ -368,7 +379,7 @@ def date_range(
         while start_date <= end_date:
             l.append(start_date)
             if delta_iscron:
-                start_date = cron.get_next(datetime)
+                start_date = shift_cron_time(cron.get_next(datetime), cron_timezone)
             else:
                 start_date += delta
     else:
@@ -376,9 +387,9 @@ def date_range(
             l.append(start_date)
             if delta_iscron:
                 if num > 0:
-                    start_date = cron.get_next(datetime)
+                    start_date = shift_cron_time(cron.get_next(datetime), cron_timezone)
                 else:
-                    start_date = cron.get_prev(datetime)
+                    start_date = shift_cron_time(cron.get_prev(datetime), cron_timezone)
             else:
                 if num > 0:
                     start_date += delta
@@ -774,4 +785,3 @@ class LoggingMixin(object):
         except AttributeError:
             self._logger = logging.root.getChild(self.__class__.__module__ + '.' +self.__class__.__name__)
             return self._logger
-

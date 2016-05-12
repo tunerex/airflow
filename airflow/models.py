@@ -2024,7 +2024,7 @@ class DAG(LoggingMixin):
         self.start_date = start_date
         self.end_date = end_date or datetime.now()
         self.schedule_interval = schedule_interval
-        self._cron_timezone = cron_timezone
+        self.cron_timezone = cron_timezone
 
         if schedule_interval in utils.cron_presets:
             self._schedule_interval = utils.cron_presets.get(schedule_interval)
@@ -2052,6 +2052,7 @@ class DAG(LoggingMixin):
             'full_filepath',
             'template_searchpath',
             'last_loaded',
+            'cron_timezone',
         }
 
     def __repr__(self):
@@ -2085,11 +2086,15 @@ class DAG(LoggingMixin):
             end_date = None
         return utils.date_range(
             start_date=start_date, end_date=end_date,
-            num=num, delta=self._schedule_interval)
+            num=num, delta=self._schedule_interval,
+            cron_timezone=self.cron_timezone)
 
     def shift_cron_time(self, time):
-        offset = self._cron_timezone.utcoffset(time)
-        return time + offset
+        offset = self.cron_timezone.utcoffset(time)
+        result = time + offset
+        if offset.total_seconds() < 0:
+            result = result + timedelta(days=1)
+        return result
 
     def following_schedule(self, dttm):
         if isinstance(self._schedule_interval, six.string_types):
