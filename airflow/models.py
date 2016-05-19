@@ -2093,23 +2093,27 @@ class DAG(LoggingMixin):
             num=num, delta=self._schedule_interval,
             cron_timezone=self.cron_timezone)
 
+    def shift_cron_base(self, time):
+        offset = self.cron_timezone.utcoffset(time)
+        result = time + offset
+        return result
+
     def shift_cron_time(self, time):
         offset = self.cron_timezone.utcoffset(time)
         result = time - offset
-        # make sure that result of time shifting is later than the time that is passed.
-        if offset.total_seconds() > 0:
-            result = result + timedelta(days=1)
         return result
 
     def following_schedule(self, dttm):
         if isinstance(self._schedule_interval, six.string_types):
-            cron = croniter(self._schedule_interval, dttm)
+            base = self.shift_cron_base(dttm)
+            cron = croniter(self._schedule_interval, base)
             return self.shift_cron_time(cron.get_next(datetime))
         elif isinstance(self._schedule_interval, timedelta):
             return dttm + self._schedule_interval
 
     def previous_schedule(self, dttm):
         if isinstance(self._schedule_interval, six.string_types):
+            base = self.shift_cron_base(dttm)
             cron = croniter(self._schedule_interval, dttm)
             return self.shift_cron_time(cron.get_prev(datetime))
         elif isinstance(self._schedule_interval, timedelta):
@@ -2294,7 +2298,10 @@ class DAG(LoggingMixin):
     @provide_session
     def set_dag_runs_state(
             self, start_date, end_date, state=State.RUNNING, session=None):
-        dates = utils.date_range(start_date, end_date)
+        dates = utils.date_range(
+            start_date=start_date,
+            end_date=end_date,
+            cron_timezone=self.cron_timezone)
         drs = session.query(DagModel).filter_by(dag_id=self.dag_id).all()
         for dr in drs:
             dr.state = State.RUNNING

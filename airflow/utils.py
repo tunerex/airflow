@@ -323,14 +323,15 @@ def validate_key(k, max_length=250):
         return True
 
 
+def shift_cron_base(time, cron_timezone=timezone('utc')):
+    offset = cron_timezone.utcoffset(time)
+    result = time + offset
+    return result
+
 def shift_cron_time(time, cron_timezone=timezone('utc')):
     offset = cron_timezone.utcoffset(time)
     result = time - offset
-    # make sure that result of time shifting is later than the time that is passed.
-    if offset.total_seconds() > 0:
-        result = result + timedelta(days=1)
-    return time + offset
-
+    return result
 
 def date_range(
         start_date,

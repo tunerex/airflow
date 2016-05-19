@@ -7,6 +7,7 @@ from builtins import str
 from past.builtins import basestring
 from collections import defaultdict
 from datetime import datetime
+from datetime import timedelta
 from itertools import product
 import getpass
 import logging
@@ -366,7 +367,7 @@ class SchedulerJob(BaseJob):
             for dr in active_runs:
                 if (
                         dr.start_date and dag.dagrun_timeout and
-                        dr.start_date < datetime.now() - dag.dagrun_timeout):
+                        dr.start_date < datetime.now() + timedelta(days=1) - dag.dagrun_timeout):
                     dr.state = State.FAILED
                     dr.end_date = datetime.now()
             session.commit()
@@ -404,7 +405,11 @@ class SchedulerJob(BaseJob):
             elif next_run_date:
                 schedule_end = dag.following_schedule(next_run_date)
 
-            if next_run_date and schedule_end and schedule_end <= datetime.now():
+            if (
+                next_run_date and \
+                schedule_end and \
+                schedule_end <= datetime.now() + timedelta(days=1)
+                ):
                 next_run = DagRun(
                     dag_id=dag.dag_id,
                     run_id='scheduled__' + next_run_date.isoformat(),
